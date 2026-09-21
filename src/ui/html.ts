@@ -4,7 +4,7 @@ export function renderHTML(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Buddy Server - Quota Management Hub</title>
+  <title>Agent Buddy Server - 管理控制台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -43,206 +43,308 @@ export function renderHTML(): string {
     }
   </style>
 </head>
-<body class="bg-[#0b0f19] text-slate-200 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+<body class="bg-[#0b0f19] text-slate-200 min-h-screen antialiased selection:bg-indigo-500 selection:text-white">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+  <!-- ==================== 1. AUTH / LOGIN SCREEN ==================== -->
+  <div id="authScreen" class="min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur space-y-6 modal-enter">
+      <!-- Logo & Title -->
+      <div class="text-center space-y-3">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/25">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
         </div>
         <div>
-          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-            Agent Buddy <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Server</span>
-          </h1>
-          <p class="text-xs text-slate-400">专用额度监测与 OAuth 代理服务</p>
+          <h2 class="text-xl font-bold text-white tracking-tight">Agent Buddy</h2>
+          <p class="text-xs text-slate-400 mt-1">请输入服务端管理密钥 (MANAGEMENT_KEY) 进行身份认证</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <div id="authStatusBadge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border">
-          <span class="w-2 h-2 rounded-full"></span>
-          <span id="authStatusText">未认证</span>
-        </div>
-
-        <button onclick="openKeyModal()" class="flex items-center gap-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
-          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-          </svg>
-          <span id="keyBtnLabel">管理密钥设置</span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-
-    <!-- Agent Buddy Device Configuration Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/20 rounded-2xl p-6 relative overflow-hidden shadow-xl">
-      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div class="space-y-1">
-          <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Agent Buddy 硬件配置</span>
-            <span class="text-xs text-slate-400">填入 agent-buddy/cfg.toml 即可无缝连接本服务</span>
-          </div>
-          <div class="flex flex-wrap items-center gap-2 text-xs text-slate-300 pt-1 font-mono">
-            <span class="text-slate-500">BASE_URL:</span>
-            <span id="dispBaseUrl" class="text-indigo-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">https://.../</span>
-            <span class="text-slate-500 ml-2">MANAGEMENT_KEY:</span>
-            <span id="dispKey" class="text-indigo-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">********</span>
-          </div>
-        </div>
-        <button onclick="copyAgentBuddyConfig()" class="inline-flex items-center gap-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition shrink-0">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-          </svg>
-          复制 cfg.toml 配置
-        </button>
-      </div>
-    </div>
-
-    <!-- Connected Accounts Section -->
-    <div class="space-y-4">
-      <div class="flex items-center justify-between">
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="event.preventDefault(); submitLogin();" class="space-y-4">
         <div>
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            已连接的账号与额度
-            <span id="accountCountBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">0</span>
-          </h2>
-          <p class="text-xs text-slate-400">Agent Buddy 将轮询并监控以下账号的实时配额</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="refreshAllQuotas()" class="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
-            <svg id="refreshSpinIcon" class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            刷新配额
-          </button>
-        </div>
-      </div>
-
-      <!-- Credential List Container -->
-      <div id="credentialList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- Rendered dynamically -->
-        <div class="col-span-full py-12 text-center text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800">
-          <svg class="w-10 h-10 mx-auto text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-          </svg>
-          <p class="text-sm font-medium">尚未添加任何 AI 账号凭据</p>
-          <p class="text-xs text-slate-600 mt-1">请在下方快速添加 OpenAI、Claude、Google Antigravity 或 Kimi 账号</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add Account Section -->
-    <div class="space-y-4 pt-4 border-t border-slate-800/80">
-      <div>
-        <h2 class="text-lg font-bold text-white">快速接入 AI 服务账号</h2>
-        <p class="text-xs text-slate-400">点击对应服务，通过 OAuth 一键授权或导入凭据</p>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-        <!-- OpenAI Codex Card -->
-        <div class="bg-slate-900 border border-slate-800 hover:border-emerald-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
-          <div class="space-y-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.6667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.6617zM13.626 12l-2.829-1.632 2.829-1.632 2.829 1.632z"/>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">管理密钥</label>
+          <div class="relative">
+            <input
+              id="loginKeyInput"
+              type="password"
+              placeholder="输入 MANAGEMENT_KEY..."
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono transition pr-10"
+              autocomplete="current-password"
+              autofocus
+            />
+            <button
+              type="button"
+              onclick="togglePasswordVisibility('loginKeyInput', this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1"
+              tabindex="-1"
+              title="切换明文显示"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
-            </div>
-            <div>
-              <h3 class="font-bold text-white group-hover:text-emerald-400 transition">OpenAI Codex</h3>
-              <p class="text-xs text-slate-400 mt-0.5">ChatGPT Plus / Pro 订阅配额监控</p>
-            </div>
+            </button>
           </div>
-          <button onclick="startOAuth('codex')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl transition">
-            连接 Codex 账号
-          </button>
         </div>
 
-        <!-- Anthropic Claude Card -->
-        <div class="bg-slate-900 border border-slate-800 hover:border-amber-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
-          <div class="space-y-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center font-bold text-base">
-              ✦
-            </div>
-            <div>
-              <h3 class="font-bold text-white group-hover:text-amber-400 transition">Anthropic Claude</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Claude Code / Pro 5小时与周配额</p>
-            </div>
-          </div>
-          <button onclick="startOAuth('claude')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl transition">
-            连接 Claude 账号
-          </button>
-        </div>
+        <div id="loginErrorMsg" class="hidden text-xs text-rose-400 p-3 bg-rose-500/10 rounded-xl border border-rose-500/20 leading-relaxed"></div>
 
-        <!-- Google CloudCode / Antigravity Card -->
-        <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
-          <div class="space-y-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center font-bold text-base">
-              G
-            </div>
-            <div>
-              <h3 class="font-bold text-white group-hover:text-blue-400 transition">Google Antigravity</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Gemini Code Assist & Claude 免费配额</p>
-            </div>
-          </div>
-          <button onclick="startOAuth('antigravity')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl transition">
-            连接 Google 账号
-          </button>
-        </div>
+        <button
+          id="loginSubmitBtn"
+          type="submit"
+          class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2"
+        >
+          <span>验证并解锁控制台</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
+        </button>
+      </form>
 
-        <!-- Moonshot Kimi Card -->
-        <div class="bg-slate-900 border border-slate-800 hover:border-purple-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
-          <div class="space-y-3">
-            <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center font-bold text-base">
-              K
-            </div>
-            <div>
-              <h3 class="font-bold text-white group-hover:text-purple-400 transition">Moonshot Kimi</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Kimi Coding 设备码快速授权</p>
-            </div>
-          </div>
-          <button onclick="startOAuth('kimi')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl transition">
-            连接 Kimi 设备码
-          </button>
-        </div>
-
+      <div class="pt-2 text-center text-xs text-slate-500">
+        此密钥用于与后端鉴权，与 ESP32 固件中配置的密钥保持一致
       </div>
+    </div>
+  </div>
 
-      <!-- JSON / Manual Import Bar -->
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+  <!-- ==================== 2. MAIN DASHBOARD SCREEN (HIDDEN UNTIL AUTHENTICATED) ==================== -->
+  <div id="dashboardScreen" class="hidden min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
             </svg>
           </div>
           <div>
-            <h4 class="text-xs font-bold text-slate-200">已有凭据文件？直接导入 JSON 凭据</h4>
-            <p class="text-xs text-slate-500">支持 CLIProxyAPI 导出的 JSON、OpenAI 或 Claude 现有凭据</p>
+            <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              Agent Buddy <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Server</span>
+            </h1>
+            <p class="text-xs text-slate-400">专用额度监测与 OAuth 代理服务</p>
           </div>
         </div>
-        <button onclick="openImportModal()" class="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl border border-slate-700 transition">
-          粘贴 / 上传 JSON
-        </button>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>已认证</span>
+          </div>
+
+          <button onclick="openKeyModal()" class="flex items-center gap-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+            </svg>
+            <span id="keyBtnLabel">管理密钥</span>
+          </button>
+
+          <button onclick="logout()" class="flex items-center gap-1.5 text-xs font-medium bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 px-3 py-1.5 rounded-lg border border-slate-700 hover:border-rose-500/30 transition" title="退出登录">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            <span class="hidden sm:inline">退出登录</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+      <!-- Agent Buddy Device Configuration Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/20 rounded-2xl p-6 relative overflow-hidden shadow-xl">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Agent Buddy 硬件配置</span>
+              <span class="text-xs text-slate-400">填入 agent-buddy/cfg.toml 即可无缝连接本服务</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-300 pt-1 font-mono">
+              <span class="text-slate-500">BASE_URL:</span>
+              <span id="dispBaseUrl" class="text-indigo-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">https://.../</span>
+              <span class="text-slate-500 ml-2">MANAGEMENT_KEY:</span>
+              <span id="dispKey" class="text-indigo-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">********</span>
+            </div>
+          </div>
+          <button onclick="copyAgentBuddyConfig()" class="inline-flex items-center gap-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/30 transition shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            复制 cfg.toml 配置
+          </button>
+        </div>
       </div>
 
-    </div>
+      <!-- Connected Accounts Section -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              已连接的账号与额度
+              <span id="accountCountBadge" class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">0</span>
+            </h2>
+            <p class="text-xs text-slate-400">Agent Buddy 将轮询并监控以下账号的实时配额</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="refreshAllQuotas()" class="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition">
+              <svg id="refreshSpinIcon" class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              刷新配额
+            </button>
+          </div>
+        </div>
 
-  </main>
+        <!-- Credential List Container -->
+        <div id="credentialList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Rendered dynamically -->
+          <div class="col-span-full py-12 text-center text-slate-500 bg-slate-900/50 rounded-2xl border border-slate-800">
+            <svg class="w-10 h-10 mx-auto text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+            <p class="text-sm font-medium">尚未添加任何 AI 账号凭据</p>
+            <p class="text-xs text-slate-600 mt-1">请在下方快速添加 OpenAI、Claude、Google Antigravity 或 Kimi 账号</p>
+          </div>
+        </div>
+      </div>
 
-  <!-- Footer -->
-  <footer class="border-t border-slate-800/60 py-6 text-center text-xs text-slate-500">
-    Agent Buddy dedicated proxy &bull; Runs seamlessly on Cloudflare Workers edge network
-  </footer>
+      <!-- Add Account Section -->
+      <div class="space-y-4 pt-4 border-t border-slate-800/80">
+        <div>
+          <h2 class="text-lg font-bold text-white">快速接入 AI 服务账号</h2>
+          <p class="text-xs text-slate-400">点击对应服务，通过 OAuth 一键授权或导入凭据</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- OpenAI Codex Card -->
+          <div class="bg-slate-900 border border-slate-800 hover:border-emerald-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
+            <div class="space-y-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.6667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.6617zM13.626 12l-2.829-1.632 2.829-1.632 2.829 1.632z"/>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-bold text-white group-hover:text-emerald-400 transition">OpenAI Codex</h3>
+                <p class="text-xs text-slate-400 mt-0.5">ChatGPT Plus / Pro 订阅配额监控</p>
+              </div>
+            </div>
+            <button onclick="startOAuth('codex')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl transition">
+              连接 Codex 账号
+            </button>
+          </div>
+
+          <!-- Anthropic Claude Card -->
+          <div class="bg-slate-900 border border-slate-800 hover:border-amber-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
+            <div class="space-y-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center font-bold text-base">
+                ✦
+              </div>
+              <div>
+                <h3 class="font-bold text-white group-hover:text-amber-400 transition">Anthropic Claude</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Claude Code / Pro 5小时与周配额</p>
+              </div>
+            </div>
+            <button onclick="startOAuth('claude')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl transition">
+              连接 Claude 账号
+            </button>
+          </div>
+
+          <!-- Google CloudCode / Antigravity Card -->
+          <div class="bg-slate-900 border border-slate-800 hover:border-blue-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
+            <div class="space-y-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center font-bold text-base">
+                G
+              </div>
+              <div>
+                <h3 class="font-bold text-white group-hover:text-blue-400 transition">Google Antigravity</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Gemini Code Assist & Claude 免费配额</p>
+              </div>
+            </div>
+            <button onclick="startOAuth('antigravity')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl transition">
+              连接 Google 账号
+            </button>
+          </div>
+
+          <!-- Moonshot Kimi Card -->
+          <div class="bg-slate-900 border border-slate-800 hover:border-purple-500/40 rounded-2xl p-5 flex flex-col justify-between transition group shadow-sm">
+            <div class="space-y-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center font-bold text-base">
+                K
+              </div>
+              <div>
+                <h3 class="font-bold text-white group-hover:text-purple-400 transition">Moonshot Kimi</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Kimi Coding 设备码快速授权</p>
+              </div>
+            </div>
+            <button onclick="startOAuth('kimi')" class="mt-5 w-full py-2 px-3 text-xs font-semibold bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl transition">
+              连接 Kimi 设备码
+            </button>
+          </div>
+
+        </div>
+
+        <!-- JSON / Manual Import Bar -->
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-slate-200">已有凭据文件？直接导入 JSON 凭据</h4>
+              <p class="text-xs text-slate-500">支持 CLIProxyAPI 导出的 JSON、OpenAI 或 Claude 现有凭据</p>
+            </div>
+          </div>
+          <button onclick="openImportModal()" class="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl border border-slate-700 transition">
+            粘贴 / 上传 JSON
+          </button>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/60 py-6 text-center text-xs text-slate-500">
+      Agent Buddy dedicated proxy &bull; Runs seamlessly on Cloudflare Workers edge network
+    </footer>
+  </div>
 
   <!-- ======================= MODALS ======================= -->
+
+  <!-- First Visit Key Notice Modal -->
+  <div id="firstVisitModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl w-full max-w-lg p-6 space-y-4 shadow-2xl modal-enter">
+      <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto text-xl font-bold">
+        ✓
+      </div>
+      <div class="text-center space-y-1">
+        <h3 class="text-lg font-bold text-white">🎉 首次访问成功！已自动生成管理密钥</h3>
+        <p class="text-xs text-slate-400">系统已自动为您生成高强度管理密钥，首次访问已为您自动完成登录：</p>
+      </div>
+      <div class="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between gap-2">
+        <code id="firstVisitKeyText" class="text-xs text-emerald-400 font-mono select-all truncate"></code>
+        <button onclick="copyFirstVisitKey()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition shrink-0">
+          复制密钥
+        </button>
+      </div>
+      <div class="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 leading-relaxed">
+        ⚠️ <strong>请务必复制并妥善保存此密钥！</strong><br/>
+        • <strong>后续每一次访问</strong>本控制台均需输入此密钥认证。<br/>
+        • ESP32 硬件端 <code>agent-buddy/cfg.toml</code> 也需配置此密钥以同步额度。
+      </div>
+      <button onclick="closeModal('firstVisitModal')" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition">
+        我已保存，进入控制台
+      </button>
+    </div>
+  </div>
 
   <!-- Key Configuration Modal -->
   <div id="keyModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
@@ -252,21 +354,24 @@ export function renderHTML(): string {
           <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
           </svg>
-          设置管理密钥 (Management Key)
+          管理密钥 (Management Key)
         </h3>
         <button onclick="closeModal('keyModal')" class="text-slate-400 hover:text-white">&times;</button>
       </div>
       <p class="text-xs text-slate-400 leading-relaxed">
-        请输入部署本 Worker 时配置的 <code class="text-indigo-300">MANAGEMENT_KEY</code>。此密钥仅保存在您的浏览器本地，用于与服务端接口鉴权。
+        当前用于与服务端接口鉴权的管理密钥：
       </p>
       <div>
         <label class="block text-xs font-medium text-slate-300 mb-1">管理密钥</label>
-        <input id="inputKey" type="password" placeholder="输入环境变量中配置的 MANAGEMENT_KEY" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono">
+        <div class="relative">
+          <input id="inputKey" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 font-mono pr-20" readonly />
+          <button onclick="copyCurrentKeyFromModal()" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-lg border border-slate-700 transition">
+            复制
+          </button>
+        </div>
       </div>
-      <div id="keyErrorMsg" class="hidden text-xs text-rose-400 p-2.5 bg-rose-500/10 rounded-xl border border-rose-500/20"></div>
       <div class="flex items-center justify-end gap-2 pt-2">
-        <button onclick="closeModal('keyModal')" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white">取消</button>
-        <button id="saveKeyBtn" onclick="saveKey()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/30 transition">验证并保存</button>
+        <button onclick="closeModal('keyModal')" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition">关闭</button>
       </div>
     </div>
   </div>
@@ -378,10 +483,10 @@ export function renderHTML(): string {
       const queryKey = urlParams.get('key');
       const hashMatch = window.location.hash.match(/[#&]key=([^&]+)/);
       const hashKey = hashMatch ? decodeURIComponent(hashMatch[1]) : null;
-      const autoKey = queryKey || hashKey;
+      const autoKey = (queryKey || hashKey || '').trim();
 
       if (autoKey) {
-        currentKey = autoKey.trim();
+        currentKey = autoKey;
         localStorage.setItem('agent_buddy_key', currentKey);
         // Clean URL
         history.replaceState(null, '', window.location.pathname);
@@ -391,37 +496,150 @@ export function renderHTML(): string {
     });
 
     async function initApp() {
-      // If no key in localStorage, check if server has an initial auto-generated key
-      if (!currentKey) {
-        try {
-          const res = await fetch('/v0/system/init-info');
-          if (res.ok) {
-            const info = await res.json();
-            if (info.key) {
-              currentKey = info.key;
-              localStorage.setItem('agent_buddy_key', currentKey);
-              showToast('🎉 已自动为您生成并配置管理密钥！', 'success');
-            }
+      // 1. Check if first visit (no key set in env, brand new deployment)
+      try {
+        const res = await fetch('/v0/system/init-info');
+        if (res.ok) {
+          const info = await res.json();
+          if (info.first_visit && info.key) {
+            // First visit without key in env: generate key, auto-login, prompt user to save!
+            currentKey = info.key;
+            localStorage.setItem('agent_buddy_key', currentKey);
+            showFirstVisitModal(currentKey);
+            unlockDashboard();
+            return;
           }
-        } catch (e) {
-          // ignore
+        }
+      } catch (e) {
+        console.error('Failed to query init-info:', e);
+      }
+
+      // 2. If stored key exists, verify it against server
+      if (currentKey) {
+        const isValid = await verifyKey(currentKey);
+        if (isValid) {
+          unlockDashboard();
+          return;
+        } else {
+          // Stored key is invalid or changed, clear it
+          localStorage.removeItem('agent_buddy_key');
+          currentKey = '';
         }
       }
 
+      // 3. Otherwise show authentication screen
+      showAuthScreen();
+    }
+
+    async function verifyKey(key) {
+      if (!key) return false;
+      try {
+        const res = await fetch('/v0/management/verify', {
+          headers: {
+            'Authorization': 'Bearer ' + key,
+            'X-Management-Key': key
+          }
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    function showAuthScreen() {
+      document.getElementById('dashboardScreen').classList.add('hidden');
+      document.getElementById('authScreen').classList.remove('hidden');
+      document.getElementById('loginKeyInput').value = '';
+      document.getElementById('loginErrorMsg').classList.add('hidden');
+    }
+
+    function unlockDashboard() {
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('dashboardScreen').classList.remove('hidden');
       updateKeyUI();
       loadCredentials();
+    }
 
-      // If still empty after check, prompt user to configure key
-      if (!currentKey) {
-        openKeyModal();
+    async function submitLogin() {
+      const input = document.getElementById('loginKeyInput');
+      const btn = document.getElementById('loginSubmitBtn');
+      const errBox = document.getElementById('loginErrorMsg');
+      const val = input.value.trim();
+
+      if (!val) {
+        errBox.textContent = '请输入管理密钥！';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      errBox.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerHTML = '<span>验证中...</span>';
+
+      try {
+        const isValid = await verifyKey(val);
+        if (isValid) {
+          currentKey = val;
+          localStorage.setItem('agent_buddy_key', val);
+          unlockDashboard();
+          showToast('验证通过，已进入控制台！', 'success');
+        } else {
+          errBox.textContent = '管理密钥错误！请检查后重试。';
+          errBox.classList.remove('hidden');
+          input.focus();
+        }
+      } catch (e) {
+        errBox.textContent = '连接异常: ' + e.message;
+        errBox.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>验证并解锁控制台</span><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
+      }
+    }
+
+    function logout() {
+      if (!confirm('确定要退出当前管理控制台吗？')) return;
+      localStorage.removeItem('agent_buddy_key');
+      currentKey = '';
+      showAuthScreen();
+      showToast('已安全退出登录', 'info');
+    }
+
+    function showFirstVisitModal(key) {
+      document.getElementById('firstVisitKeyText').textContent = key;
+      openModal('firstVisitModal');
+    }
+
+    function copyFirstVisitKey() {
+      const key = document.getElementById('firstVisitKeyText').textContent;
+      navigator.clipboard.writeText(key).then(() => {
+        showToast('管理密钥已复制到剪贴板！', 'success');
+      });
+    }
+
+    function copyCurrentKeyFromModal() {
+      const key = document.getElementById('inputKey').value;
+      navigator.clipboard.writeText(key).then(() => {
+        showToast('管理密钥已复制！', 'success');
+      });
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.classList.add('text-indigo-400');
+        btn.classList.remove('text-slate-500');
+      } else {
+        input.type = 'password';
+        btn.classList.remove('text-indigo-400');
+        btn.classList.add('text-slate-500');
       }
     }
 
     function updateKeyUI() {
       const dispBaseUrl = document.getElementById('dispBaseUrl');
       const dispKey = document.getElementById('dispKey');
-      const badge = document.getElementById('authStatusBadge');
-      const badgeText = document.getElementById('authStatusText');
       const keyBtnLabel = document.getElementById('keyBtnLabel');
 
       const origin = window.location.origin + '/';
@@ -429,71 +647,16 @@ export function renderHTML(): string {
 
       if (currentKey) {
         dispKey.textContent = currentKey;
-        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-        badgeText.textContent = '已配置密钥';
-        badge.firstElementChild.className = 'w-2 h-2 rounded-full bg-emerald-400';
-        keyBtnLabel.textContent = '管理密钥: ' + (currentKey.length > 12 ? currentKey.substring(0, 10) + '...' : currentKey);
+        keyBtnLabel.textContent = '密钥: ' + (currentKey.length > 12 ? currentKey.substring(0, 10) + '...' : currentKey);
       } else {
         dispKey.textContent = '未配置';
-        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-400 border-amber-500/20';
-        badgeText.textContent = '未输入密钥';
-        badge.firstElementChild.className = 'w-2 h-2 rounded-full bg-amber-400';
-        keyBtnLabel.textContent = '设置管理密钥';
+        keyBtnLabel.textContent = '管理密钥';
       }
     }
 
     function openKeyModal() {
       document.getElementById('inputKey').value = currentKey;
-      document.getElementById('keyErrorMsg').classList.add('hidden');
       openModal('keyModal');
-    }
-
-    async function saveKey() {
-      const val = document.getElementById('inputKey').value.trim();
-      const errBox = document.getElementById('keyErrorMsg');
-      const btn = document.getElementById('saveKeyBtn');
-
-      if (!val) {
-        errBox.textContent = '请输入密钥后再保存！';
-        errBox.classList.remove('hidden');
-        return;
-      }
-
-      errBox.classList.add('hidden');
-      btn.disabled = true;
-      btn.textContent = '验证中...';
-
-      try {
-        const testRes = await fetch('/v0/management/verify', {
-          headers: { 'Authorization': 'Bearer ' + val }
-        });
-
-        if (testRes.status === 401) {
-          errBox.textContent = '密钥错误！与服务端配置的 MANAGEMENT_KEY 不一致。';
-          errBox.classList.remove('hidden');
-          return;
-        }
-
-        if (testRes.status === 500) {
-          const errData = await testRes.json();
-          errBox.textContent = errData.error || '服务端尚未在环境变量中配置 MANAGEMENT_KEY！';
-          errBox.classList.remove('hidden');
-          return;
-        }
-
-        currentKey = val;
-        localStorage.setItem('agent_buddy_key', val);
-        closeModal('keyModal');
-        updateKeyUI();
-        loadCredentials();
-        showToast('密钥验证成功并已保存！', 'success');
-      } catch (e) {
-        errBox.textContent = '请求异常: ' + e.message;
-        errBox.classList.remove('hidden');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '验证并保存';
-      }
     }
 
     function copyAgentBuddyConfig() {
@@ -535,7 +698,8 @@ export function renderHTML(): string {
       try {
         const res = await apiFetch('/v0/management/auth-files');
         if (res.status === 401) {
-          showToast('管理密钥错误或未设置，请先配置密钥', 'error');
+          showToast('管理密钥错误或已失效，请重新登录', 'error');
+          logout();
           return;
         }
         if (!res.ok) throw new Error('HTTP ' + res.status);

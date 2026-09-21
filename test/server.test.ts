@@ -217,14 +217,16 @@ test("DELETE /v0/management/auth-files removes credential", async () => {
   assert.equal(item, undefined);
 });
 
-test("Web UI is served at / and /management.html", async () => {
+test("Web UI renders authScreen and keeps dashboard hidden by default", async () => {
   for (const path of ["/", "/management.html"]) {
     const req = new Request(`http://localhost${path}`, { method: "GET" });
     const res = await app.fetch(req, mockEnv);
     assert.equal(res.status, 200);
     const text = await res.text();
+    assert.ok(text.includes('id="authScreen"'));
+    assert.ok(text.includes('id="dashboardScreen"'));
+    assert.ok(text.includes('id="dashboardScreen" class="hidden'));
     assert.ok(text.includes("Agent Buddy"));
-    assert.ok(text.includes("MANAGEMENT_KEY"));
   }
 });
 
@@ -244,19 +246,31 @@ test("Key verification endpoint /v0/management/verify works", async () => {
   assert.equal(invalidRes.status, 401);
 });
 
-test("Auto-generates MANAGEMENT_KEY when env is not provided", async () => {
+test("Auto-generates MANAGEMENT_KEY on first visit and enforces login on subsequent visits", async () => {
   const emptyEnv: Env = {};
-  const initReq = new Request("http://localhost/v0/system/init-info", { method: "GET" });
-  const initRes = await app.fetch(initReq, emptyEnv);
-  assert.equal(initRes.status, 200);
-  const data = (await initRes.json()) as any;
-  assert.equal(data.auto_generated, true);
-  assert.ok(data.key.startsWith("cb_sec_"));
+
+  // First visit
+  const initReq1 = new Request("http://localhost/v0/system/init-info", { method: "GET" });
+  const initRes1 = await app.fetch(initReq1, emptyEnv);
+  assert.equal(initRes1.status, 200);
+  const data1 = (await initRes1.json()) as any;
+  assert.equal(data1.first_visit, true);
+  assert.equal(data1.auto_generated, true);
+  assert.ok(data1.key.startsWith("cb_sec_"));
 
   // Verify the auto-generated key can authenticate
   const verifyReq = new Request("http://localhost/v0/management/verify", {
-    headers: { Authorization: `Bearer ${data.key}` },
+    headers: { Authorization: `Bearer ${data1.key}` },
   });
   const verifyRes = await app.fetch(verifyReq, emptyEnv);
   assert.equal(verifyRes.status, 200);
+
+  // Subsequent visit: must NOT return the key and MUST require login!
+  const initReq2 = new Request("http://localhost/v0/system/init-info", { method: "GET" });
+  const initRes2 = await app.fetch(initReq2, emptyEnv);
+  assert.equal(initRes2.status, 200);
+  const data2 = (await initRes2.json()) as any;
+  assert.equal(data2.first_visit, false);
+  assert.equal(data2.require_login, true);
+  assert.equal(data2.key, undefined);
 });
