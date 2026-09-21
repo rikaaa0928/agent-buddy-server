@@ -10,8 +10,8 @@ compatibility_flags = ["nodejs_compat"]
 # MANAGEMENT_KEY = "your-custom-key"
 
 # KV namespace 用于持久化保存 OAuth 凭据:
-# 运行 `npx wrangler kv namespace create AUTH_KV` 创建后将 ID 填入下方；
-# 或者在 Cloudflare 网页控制台 (Workers -> Settings -> Bindings -> KV Namespace) 中直接绑定 AUTH_KV 即可。
-[[kv_namespaces]]
-binding = "AUTH_KV"
-id = "auth_kv_placeholder"
+# - 方式一（推荐，网页控制台从 GitHub 部署）：保持下方注释即可！部署后直接在 Cloudflare 网页后台 (Settings -> Bindings -> Add KV Namespace) 绑定 AUTH_KV 即可。
+# - 方式二（CLI 命令行部署）：取消下方注释，将 id 改为您运行 `npx wrangler kv namespace create AUTH_KV` 生成的真实 ID。
+# [[kv_namespaces]]
+# binding = "AUTH_KV"
+# id = "auth_kv_placeholder"
