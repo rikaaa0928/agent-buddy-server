@@ -1,0 +1,17 @@
+name = "agent-buddy-server"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# [vars]
+# 提示: MANAGEMENT_KEY 完全无需在此修改！
+# - 方式一（零配置）：若未设置环境变量，服务首次运行会自动生成一个高强度安全密钥并存入 KV，网页端首次打开会自动完成登录并展示给你复制。
+# - 方式二（环境变量）：可在 Cloudflare 网页后台 (Settings -> Variables and Secrets) 直接添加 MANAGEMENT_KEY 变量，无需修改代码文件。
+# MANAGEMENT_KEY = "your-custom-key"
+
+# KV namespace 用于持久化保存 OAuth 凭据:
+# 运行 `npx wrangler kv namespace create AUTH_KV` 创建后将 ID 填入下方；
+# 或者在 Cloudflare 网页控制台 (Workers -> Settings -> Bindings -> KV Namespace) 中直接绑定 AUTH_KV 即可。
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = "auth_kv_placeholder"

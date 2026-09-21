@@ -1,0 +1,32 @@
+{
+  "name": "agent-buddy-server",
+  "version": "1.0.0",
+  "description": "Dedicated Cloudflare Worker proxy server for agent-buddy quota monitoring",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "tsx --test test/server.test.ts",
+    "build": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "keywords": [
+    "agent-buddy",
+    "cloudflare-workers",
+    "oauth",
+    "proxy",
+    "quota"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.7.2",
+    "wrangler": "^3.99.0"
+  }
+}
