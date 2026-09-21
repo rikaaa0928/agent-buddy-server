@@ -3,6 +3,8 @@ export type ProviderType = "codex" | "claude" | "antigravity" | "kimi";
 export interface Env {
   MANAGEMENT_KEY?: string;
   AUTH_KV?: KVNamespace;
+  OPENAI_FORWARD_URL?: string;
+  OPENAI_FORWARD_KEY?: string;
 }
 
 export interface CredentialRecord {

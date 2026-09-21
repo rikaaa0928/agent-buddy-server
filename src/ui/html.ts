@@ -951,7 +951,9 @@ export function renderHTML(): string {
           console.error('[Quota Error] upstream HTTP ' + data.status_code, data.body);
           let reason = '上游返回 ' + data.status_code;
           const bodyStr = typeof data.body === 'string' ? data.body : JSON.stringify(data.body || {});
-          if (bodyStr.includes('unsupported_country_region_territory') || bodyStr.includes('Country, region, or territory not supported')) {
+          if (bodyStr.includes('enlarge-appear') || bodyStr.includes('Attention Required') || bodyStr.includes('Just a moment')) {
+            reason = 'Cloudflare WAF拦截 (403)';
+          } else if (bodyStr.includes('unsupported_country_region_territory') || bodyStr.includes('Country, region, or territory not supported')) {
             reason = 'OpenAI地区受限 (403)';
           } else if (bodyStr.includes('PERMISSION_DENIED') || bodyStr.includes('SERVICE_DISABLED')) {
             reason = 'GCP项目权限不足 (403)';

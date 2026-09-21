@@ -64,6 +64,26 @@ export async function handleAPICall(env: Env, body: APICallRequest): Promise<API
 
   let justRefreshed = false;
 
+  // Optional Forward Proxy for chatgpt.com to bypass Cloudflare WAF bot challenges
+  if (env.OPENAI_FORWARD_URL && targetUrl.includes("chatgpt.com")) {
+    const forwardBase = env.OPENAI_FORWARD_URL.replace(/\/+$/, "");
+    try {
+      const forwardRes = await fetch(`${forwardBase}/v0/management/api-call`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.OPENAI_FORWARD_KEY || env.MANAGEMENT_KEY || ""}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (forwardRes.ok) {
+        return (await forwardRes.json()) as APICallResponse;
+      }
+    } catch (e) {
+      console.warn("OPENAI_FORWARD_URL request failed, falling back to direct fetch:", e);
+    }
+  }
+
   // Auto-refresh token if close to expiry (within 5 minutes)
   if (cred && cred.refresh_token) {
     const isExpiringSoon = Date.now() >= cred.expires_at - 5 * 60 * 1000;
