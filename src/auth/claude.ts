@@ -56,21 +56,24 @@ export async function exchangeClaudeCode(codeRaw: string, verifier: string, stat
     throw new Error(`Claude token exchange failed (status ${res.status}): ${errText}`);
   }
 
-  const data = (await res.json()) as {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-    expires_in: number;
-    organization?: {
-      uuid?: string;
-      name?: string;
-    };
-    account?: {
-      uuid?: string;
-      email_address?: string;
-    };
-  };
+  const data = (await res.json()) as any;
+  return parseClaudeTokenResponse(data);
+}
 
+export async function parseClaudeTokenResponse(data: {
+  access_token: string;
+  refresh_token: string;
+  token_type?: string;
+  expires_in?: number;
+  organization?: {
+    uuid?: string;
+    name?: string;
+  };
+  account?: {
+    uuid?: string;
+    email_address?: string;
+  };
+}) {
   let email = data.account?.email_address;
   const orgName = data.organization?.name;
 

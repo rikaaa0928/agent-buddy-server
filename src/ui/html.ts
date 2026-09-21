@@ -1099,6 +1099,80 @@ export function renderHTML(): string {
         });
 
         const data = await res.json();
+
+        // Automatic fallback: if Cloudflare Worker was blocked by OpenAI/Claude due to edge IP region,
+        // use browser direct connection (which runs in the user's proxy environment) to complete the exchange!
+        if (data.status === 'client_exchange_required') {
+          showToast('Cloudflare 节点受限，正在通过浏览器代理直连换取 Token...', 'info');
+          submitBtn.innerHTML = '<span>浏览器直连换取中...</span>';
+
+          try {
+            let tokenRes;
+            if (data.provider === 'codex') {
+              tokenRes = await fetch(data.token_url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'Accept': 'application/json'
+                },
+                body: new URLSearchParams({
+                  grant_type: 'authorization_code',
+                  client_id: data.client_id,
+                  code: data.code,
+                  code_verifier: data.verifier,
+                  redirect_uri: data.redirect_uri
+                }).toString()
+              });
+            } else if (data.provider === 'claude') {
+              tokenRes = await fetch(data.token_url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                  grant_type: 'authorization_code',
+                  client_id: data.client_id,
+                  code: data.code,
+                  code_verifier: data.verifier,
+                  redirect_uri: data.redirect_uri
+                })
+              });
+            }
+
+            if (!tokenRes.ok) {
+              const errJson = await tokenRes.json().catch(() => ({}));
+              throw new Error(errJson.error?.message || errJson.error || ('HTTP ' + tokenRes.status));
+            }
+
+            const tokenJson = await tokenRes.json();
+            const saveRes = await apiFetch('/v0/management/oauth-save-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                provider: data.provider,
+                token_data: tokenJson,
+                state: data.state
+              })
+            });
+
+            const saveData = await saveRes.json();
+            if (saveRes.ok && saveData.status === 'ok') {
+              closeModal('oauthModal');
+              showToast('🎉 浏览器直连成功！已接入 ' + data.provider + ' 账号', 'success');
+              loadCredentials();
+              return;
+            } else {
+              throw new Error(saveData.error || '保存凭据失败');
+            }
+          } catch (clientErr) {
+            errBox.innerHTML = '<strong>浏览器直连换取失败：</strong>' + clientErr.message +
+              '<br/><span class="text-[11px] text-slate-400 mt-1 block">提示：请确保您的电脑开启了科学上网代理（建议使用美国/日本/新加坡节点），或直接在下方点击“粘贴 / 上传 JSON”直接导入现有凭据。</span>';
+            errBox.classList.remove('hidden');
+            return;
+          }
+        }
+
         if (res.ok && data.status === 'ok') {
           closeModal('oauthModal');
           showToast('成功连接账号！', 'success');

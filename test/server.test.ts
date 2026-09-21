@@ -291,6 +291,32 @@ test("Reports HTTP 500 error when KV is disconnected or not bound", async () => 
   assert.ok(authData.error.includes("Cloudflare KV"));
 });
 
+test("POST /v0/management/oauth-save-token directly saves tokens from client exchange", async () => {
+  const req = new Request("http://localhost/v0/management/oauth-save-token", {
+    method: "POST",
+    headers: {
+      "X-Management-Key": "test-secret-key",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      provider: "codex",
+      token_data: {
+        access_token: "mock-client-access-token",
+        refresh_token: "mock-client-refresh-token",
+        expires_in: 3600,
+        id_token: undefined,
+      },
+    }),
+  });
+
+  const res = await app.fetch(req, mockEnv);
+  assert.equal(res.status, 200);
+  const data = (await res.json()) as any;
+  assert.equal(data.status, "ok");
+  assert.ok(data.credential.auth_index);
+  assert.ok(data.credential.name.includes("codex"));
+});
+
 test("Auto-generates MANAGEMENT_KEY on first visit and enforces login on subsequent visits", async () => {
   const emptyEnvWithKV: Env = {
     AUTH_KV: createMockKV(),

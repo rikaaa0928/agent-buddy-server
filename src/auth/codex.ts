@@ -46,14 +46,17 @@ export async function exchangeCodexCode(code: string, verifier: string) {
     throw new Error(`OpenAI Codex token exchange failed (status ${res.status}): ${errText}`);
   }
 
-  const data = (await res.json()) as {
-    access_token: string;
-    refresh_token: string;
-    id_token?: string;
-    token_type: string;
-    expires_in: number;
-  };
+  const data = (await res.json()) as any;
+  return parseCodexTokenResponse(data);
+}
 
+export function parseCodexTokenResponse(data: {
+  access_token: string;
+  refresh_token: string;
+  id_token?: string;
+  token_type?: string;
+  expires_in?: number;
+}) {
   let email: string | undefined;
   let accountId: string | undefined;
   let planType: string | undefined;

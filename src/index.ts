@@ -2,8 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handleAPICall, refreshCredential } from "./api_call";
 import { exchangeAntigravityCode, generateAntigravityAuthUrl } from "./auth/antigravity";
-import { exchangeClaudeCode, generateClaudeAuthUrl } from "./auth/claude";
-import { exchangeCodexCode, generateCodexAuthUrl } from "./auth/codex";
+import { exchangeClaudeCode, generateClaudeAuthUrl, parseClaudeTokenResponse } from "./auth/claude";
+import { exchangeCodexCode, generateCodexAuthUrl, parseCodexTokenResponse } from "./auth/codex";
 import { pollKimiToken, startKimiDeviceFlow } from "./auth/kimi";
 import { generatePKCE, generateRandomState } from "./auth/pkce";
 import {
@@ -387,9 +387,48 @@ app.post("/v0/management/oauth-callback", async (c) => {
     let tokenData: any;
 
     if (provider === "codex") {
-      tokenData = await exchangeCodexCode(code, session.pkce_verifier || "");
+      try {
+        tokenData = await exchangeCodexCode(code, session.pkce_verifier || "");
+      } catch (err: any) {
+        if (
+          err.message &&
+          (err.message.includes("unsupported_country_region_territory") ||
+            err.message.includes("Country, region, or territory not supported") ||
+            err.message.includes("403"))
+        ) {
+          return c.json({
+            status: "client_exchange_required",
+            provider: "codex",
+            code: code,
+            verifier: session.pkce_verifier || "",
+            client_id: "app_EMoamEEZ73f0CkXaXp7hrann",
+            redirect_uri: "http://localhost:1455/auth/callback",
+            token_url: "https://auth.openai.com/oauth/token",
+            state: state,
+            message: "Cloudflare 边缘节点受限，正在自动切换为浏览器直连换取 Token...",
+          });
+        }
+        throw err;
+      }
     } else if (provider === "claude") {
-      tokenData = await exchangeClaudeCode(code, session.pkce_verifier || "", state);
+      try {
+        tokenData = await exchangeClaudeCode(code, session.pkce_verifier || "", state);
+      } catch (err: any) {
+        if (err.message && err.message.includes("403")) {
+          return c.json({
+            status: "client_exchange_required",
+            provider: "claude",
+            code: code,
+            verifier: session.pkce_verifier || "",
+            client_id: "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+            redirect_uri: "http://localhost:54545/callback",
+            token_url: "https://platform.claude.com/v1/oauth/token",
+            state: state,
+            message: "Cloudflare 边缘节点受限，正在自动切换为浏览器直连换取 Token...",
+          });
+        }
+        throw err;
+      }
     } else if (provider === "antigravity") {
       tokenData = await exchangeAntigravityCode(code);
     } else {
@@ -438,6 +477,68 @@ app.post("/v0/management/oauth-callback", async (c) => {
     console.error("Token exchange failed:", err);
     return c.json({ status: "error", error: err.message }, 500);
   }
+});
+
+// 8.5 Direct Save from Client-side OAuth Exchange (Bypasses Cloudflare Egress Restrictions)
+app.post("/v0/management/oauth-save-token", async (c) => {
+  const body = await c.req.json<{
+    provider: ProviderType;
+    token_data: any;
+    state?: string;
+  }>();
+
+  if (!body.provider || !body.token_data) {
+    return c.json({ status: "error", error: "missing provider or token_data" }, 400);
+  }
+
+  const existing = await listCredentials(c.env);
+  let tokenInfo: any;
+
+  if (body.provider === "codex") {
+    tokenInfo = parseCodexTokenResponse(body.token_data);
+  } else if (body.provider === "claude") {
+    tokenInfo = await parseClaudeTokenResponse(body.token_data);
+  } else {
+    return c.json({ status: "error", error: "unsupported provider for client save" }, 400);
+  }
+
+  const authIdx = `${body.provider}-${existing.length}`;
+  const credId = `${body.provider}-${Date.now()}`;
+  const emailSanitized = (tokenInfo.email || "user").replace(/[^a-zA-Z0-9@._-]/g, "");
+  const credName = `${body.provider}-${emailSanitized}.json`;
+
+  const cred: CredentialRecord = {
+    id: credId,
+    auth_index: authIdx,
+    name: credName,
+    provider: body.provider,
+    type: body.provider,
+    status: "active",
+    disabled: false,
+    email: tokenInfo.email,
+    plan_type: tokenInfo.plan_type,
+    access_token: tokenInfo.access_token,
+    refresh_token: tokenInfo.refresh_token,
+    expires_at: Date.now() + (tokenInfo.expires_in || 3600) * 1000,
+    created_at: Date.now(),
+    updated_at: Date.now(),
+  };
+
+  await saveCredential(c.env, cred);
+  if (body.state) {
+    await deleteOAuthSession(c.env, body.state).catch(() => {});
+  }
+
+  return c.json({
+    status: "ok",
+    credential: {
+      id: cred.id,
+      auth_index: cred.auth_index,
+      name: cred.name,
+      provider: cred.provider,
+      email: cred.email,
+    },
+  });
 });
 
 // 9. Check Auth Status / Cancel OAuth Session
