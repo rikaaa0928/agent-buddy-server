@@ -948,7 +948,19 @@ export function renderHTML(): string {
           const parsed = JSON.parse(data.body);
           parseAndDisplayQuota(parsed, provider, statusSpan, progressBar);
         } else {
-          statusSpan.textContent = '上游返回 ' + data.status_code;
+          console.error('[Quota Error] upstream HTTP ' + data.status_code, data.body);
+          let reason = '上游返回 ' + data.status_code;
+          const bodyStr = typeof data.body === 'string' ? data.body : JSON.stringify(data.body || {});
+          if (bodyStr.includes('unsupported_country_region_territory') || bodyStr.includes('Country, region, or territory not supported')) {
+            reason = 'OpenAI地区受限 (403)';
+          } else if (bodyStr.includes('PERMISSION_DENIED') || bodyStr.includes('SERVICE_DISABLED')) {
+            reason = 'GCP项目权限不足 (403)';
+          } else if (data.status_code === 401) {
+            reason = 'Token已失效 (401)';
+          } else if (data.status_code === 403) {
+            reason = '无权限/受限 (403)';
+          }
+          statusSpan.innerHTML = '<span class="text-rose-400 font-medium cursor-pointer underline hover:text-rose-300" onclick="alert(decodeURIComponent(this.getAttribute(\\'data-detail\\')))" data-detail="' + encodeURIComponent('【上游报错 HTTP ' + data.status_code + '】\\n' + bodyStr) + '" title="点击查看完整报错">' + reason + ' (详情)</span>';
         }
       } catch (err) {
         statusSpan.textContent = '查询出错';
