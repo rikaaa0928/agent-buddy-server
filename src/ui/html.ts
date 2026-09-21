@@ -61,6 +61,17 @@ export function renderHTML(): string {
         </div>
       </div>
 
+      <!-- KV Disconnected Error Box on Login Screen -->
+      <div id="authKvErrorBanner" class="hidden p-3.5 bg-rose-500/15 border border-rose-500/40 rounded-2xl text-rose-300 text-xs space-y-1.5 shadow-lg">
+        <div class="flex items-center gap-2 font-bold text-rose-200">
+          <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+          <span>❌ 错误：Cloudflare KV 数据库未连接！</span>
+        </div>
+        <p class="text-[11px] text-slate-300 leading-relaxed">
+          当前 Worker 未绑定 <code>AUTH_KV</code> 命名空间。请在 Cloudflare 控制台 -> Workers & Pages -> 你的 Worker -> <strong>Settings -> Bindings</strong> 中绑定 <code>AUTH_KV</code>，否则无法保存任何数据！
+        </p>
+      </div>
+
       <!-- Login Form -->
       <form id="loginForm" onsubmit="event.preventDefault(); submitLogin();" class="space-y-4">
         <div>
@@ -130,8 +141,14 @@ export function renderHTML(): string {
         </div>
 
         <div class="flex items-center gap-2 sm:gap-3">
-          <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+          <!-- KV Health Status Badge -->
+          <div id="kvStatusBadge" class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="kvStatusText">KV: 正常</span>
+          </div>
+
+          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+            <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
             <span>已认证</span>
           </div>
 
@@ -154,6 +171,27 @@ export function renderHTML(): string {
 
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+      <!-- Prominent KV Disconnected Error Banner on Dashboard -->
+      <div id="dashKvErrorBanner" class="hidden p-4 rounded-2xl bg-rose-500/15 border-2 border-rose-500/50 text-rose-200 text-xs shadow-2xl space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 font-bold text-rose-300 text-sm">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+            <span>❌ 严重错误：Cloudflare KV 数据库未连接或绑定丢失！</span>
+          </div>
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-rose-500/30 text-rose-200 border border-rose-500/40 font-bold uppercase">KV ERROR</span>
+        </div>
+        <p class="text-slate-300 leading-relaxed">
+          当前 Worker 检测不到 <code>AUTH_KV</code> 命名空间绑定。在此状态下，添加或导入的所有账号凭据将<strong>无法持久化保存</strong>，Worker 重启后会全部丢失！
+        </p>
+        <div class="p-3 bg-black/40 rounded-xl border border-rose-500/20 font-mono text-[11px] text-rose-300 space-y-1">
+          <p><strong>👉 立即修复方法（只需 1 分钟）：</strong></p>
+          <p>1. 打开 Cloudflare 控制台 -> <strong>Workers & Pages</strong> -> 点击 <code>agent-buddy-server</code></p>
+          <p>2. 进入 <strong>Settings</strong> -> <strong>Bindings</strong> -> 点击 <strong>Add binding</strong></p>
+          <p>3. 选择 <strong>KV Namespace</strong>，变量名称必须填：<span class="text-white font-bold underline">AUTH_KV</span></p>
+          <p>4. 命名空间下拉选中您的 KV 仓库，点击 <strong>Save and deploy</strong> 即可！</p>
+        </div>
+      </div>
 
       <!-- Agent Buddy Device Configuration Banner -->
       <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/20 rounded-2xl p-6 relative overflow-hidden shadow-xl">
@@ -476,6 +514,7 @@ export function renderHTML(): string {
     let currentOAuthState = '';
     let currentOAuthProvider = '';
     let kimiPollTimer = null;
+    let isKvConnected = true;
 
     document.addEventListener('DOMContentLoaded', () => {
       // Support reading key from URL hash or query: #key=... or ?key=...
@@ -496,11 +535,20 @@ export function renderHTML(): string {
     });
 
     async function initApp() {
-      // 1. Check if first visit (no key set in env, brand new deployment)
+      // 1. Check system init and KV connection health
       try {
         const res = await fetch('/v0/system/init-info');
-        if (res.ok) {
+        if (res.status === 500) {
+          const errData = await res.json().catch(() => ({}));
+          handleKvConnectionError(errData.error || 'Cloudflare KV 数据库未连接！');
+        } else if (res.ok) {
           const info = await res.json();
+          if (info.kv_bound === false) {
+            handleKvConnectionError(info.error || 'Cloudflare KV 数据库未连接！');
+          } else {
+            setKvConnectedState(true);
+          }
+
           if (info.first_visit && info.key) {
             // First visit without key in env: generate key, auto-login, prompt user to save!
             currentKey = info.key;
@@ -512,6 +560,7 @@ export function renderHTML(): string {
         }
       } catch (e) {
         console.error('Failed to query init-info:', e);
+        handleKvConnectionError('无法连接服务端系统状态: ' + e.message);
       }
 
       // 2. If stored key exists, verify it against server
@@ -529,6 +578,36 @@ export function renderHTML(): string {
 
       // 3. Otherwise show authentication screen
       showAuthScreen();
+    }
+
+    function handleKvConnectionError(msg) {
+      isKvConnected = false;
+      document.getElementById('authKvErrorBanner').classList.remove('hidden');
+      document.getElementById('dashKvErrorBanner').classList.remove('hidden');
+
+      const badge = document.getElementById('kvStatusBadge');
+      const text = document.getElementById('kvStatusText');
+      if (badge && text) {
+        badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-rose-500/20 text-rose-400 border-rose-500/40';
+        badge.firstElementChild.className = 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+        text.textContent = 'KV: 未连接 (报错)';
+      }
+      showToast('❌ 错误：' + msg, 'error');
+    }
+
+    function setKvConnectedState(connected) {
+      isKvConnected = connected;
+      if (connected) {
+        document.getElementById('authKvErrorBanner').classList.add('hidden');
+        document.getElementById('dashKvErrorBanner').classList.add('hidden');
+        const badge = document.getElementById('kvStatusBadge');
+        const text = document.getElementById('kvStatusText');
+        if (badge && text) {
+          badge.className = 'flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+          badge.firstElementChild.className = 'w-2 h-2 rounded-full bg-emerald-400';
+          text.textContent = 'KV: 正常';
+        }
+      }
     }
 
     async function verifyKey(key) {
@@ -702,11 +781,18 @@ export function renderHTML(): string {
           logout();
           return;
         }
+        if (res.status === 500) {
+          const errData = await res.json().catch(() => ({}));
+          handleKvConnectionError(errData.error || 'KV 数据库连接失败！');
+          return;
+        }
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        setKvConnectedState(true);
         renderCredentials(data.files || []);
       } catch (err) {
         console.error('Failed to load credentials:', err);
+        showToast('加载账号列表失败: ' + err.message, 'error');
       }
     }
 
@@ -920,10 +1006,11 @@ export function renderHTML(): string {
           showToast('已删除凭据 ' + name, 'success');
           loadCredentials();
         } else {
-          showToast('删除失败', 'error');
+          const errData = await res.json().catch(() => ({}));
+          showToast('删除失败: ' + (errData.error || res.status), 'error');
         }
       } catch (err) {
-        showToast('请求异常', 'error');
+        showToast('请求异常: ' + err.message, 'error');
       }
     }
 
@@ -952,7 +1039,7 @@ export function renderHTML(): string {
             closeModal('kimiModal');
           }
         } catch (e) {
-          showToast('请求异常', 'error');
+          showToast('请求异常: ' + e.message, 'error');
           closeModal('kimiModal');
         }
         return;
@@ -972,13 +1059,16 @@ export function renderHTML(): string {
 
       try {
         const res = await apiFetch(endpoint);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || ('HTTP ' + res.status));
+        }
         const data = await res.json();
         currentOAuthState = data.state;
         externalLink.href = data.url;
         openModal('oauthModal');
       } catch (err) {
-        showToast('获取授权链接失败，请检查管理密钥', 'error');
+        showToast('获取授权链接失败: ' + err.message, 'error');
       }
     }
 

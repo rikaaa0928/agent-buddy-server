@@ -3,8 +3,27 @@ import assert from "node:assert/strict";
 import app from "../src/index";
 import { Env } from "../src/types";
 
+function createMockKV(): KVNamespace {
+  const store = new Map<string, string>();
+  return {
+    get: async (key: string) => store.get(key) || null,
+    put: async (key: string, val: string) => {
+      store.set(key, val);
+    },
+    delete: async (key: string) => {
+      store.delete(key);
+    },
+    list: async () => ({
+      keys: Array.from(store.keys()).map((name) => ({ name })),
+      list_complete: true,
+      cursor: "",
+    }),
+  } as any;
+}
+
 const mockEnv: Env = {
   MANAGEMENT_KEY: "test-secret-key",
+  AUTH_KV: createMockKV(),
 };
 
 test("Unauthorized access to /v0/management/auth-files is rejected with 401", async () => {
@@ -246,12 +265,40 @@ test("Key verification endpoint /v0/management/verify works", async () => {
   assert.equal(invalidRes.status, 401);
 });
 
+test("Reports HTTP 500 error when KV is disconnected or not bound", async () => {
+  const envWithoutKV: Env = {
+    MANAGEMENT_KEY: "test-secret-key",
+  };
+
+  // init-info returns 500
+  const initReq = new Request("http://localhost/v0/system/init-info", { method: "GET" });
+  const initRes = await app.fetch(initReq, envWithoutKV);
+  assert.equal(initRes.status, 500);
+  const initData = (await initRes.json()) as any;
+  assert.equal(initData.status, "error");
+  assert.equal(initData.kv_bound, false);
+  assert.ok(initData.error.includes("Cloudflare KV"));
+
+  // auth-files list returns 500
+  const authReq = new Request("http://localhost/v0/management/auth-files", {
+    method: "GET",
+    headers: { Authorization: "Bearer test-secret-key" },
+  });
+  const authRes = await app.fetch(authReq, envWithoutKV);
+  assert.equal(authRes.status, 500);
+  const authData = (await authRes.json()) as any;
+  assert.equal(authData.status, "error");
+  assert.ok(authData.error.includes("Cloudflare KV"));
+});
+
 test("Auto-generates MANAGEMENT_KEY on first visit and enforces login on subsequent visits", async () => {
-  const emptyEnv: Env = {};
+  const emptyEnvWithKV: Env = {
+    AUTH_KV: createMockKV(),
+  };
 
   // First visit
   const initReq1 = new Request("http://localhost/v0/system/init-info", { method: "GET" });
-  const initRes1 = await app.fetch(initReq1, emptyEnv);
+  const initRes1 = await app.fetch(initReq1, emptyEnvWithKV);
   assert.equal(initRes1.status, 200);
   const data1 = (await initRes1.json()) as any;
   assert.equal(data1.first_visit, true);
@@ -262,12 +309,12 @@ test("Auto-generates MANAGEMENT_KEY on first visit and enforces login on subsequ
   const verifyReq = new Request("http://localhost/v0/management/verify", {
     headers: { Authorization: `Bearer ${data1.key}` },
   });
-  const verifyRes = await app.fetch(verifyReq, emptyEnv);
+  const verifyRes = await app.fetch(verifyReq, emptyEnvWithKV);
   assert.equal(verifyRes.status, 200);
 
   // Subsequent visit: must NOT return the key and MUST require login!
   const initReq2 = new Request("http://localhost/v0/system/init-info", { method: "GET" });
-  const initRes2 = await app.fetch(initReq2, emptyEnv);
+  const initRes2 = await app.fetch(initReq2, emptyEnvWithKV);
   assert.equal(initRes2.status, 200);
   const data2 = (await initRes2.json()) as any;
   assert.equal(data2.first_visit, false);
