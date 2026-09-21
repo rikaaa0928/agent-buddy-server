@@ -28,9 +28,48 @@
 
 ---
 
-## 🚀 极简部署指南 (Cloudflare Workers)
+## 🚀 部署指南 (Cloudflare Workers)
 
-### 1. 安装依赖
+提供两种部署方式：**网页控制台通过 GitHub 自动部署（推荐，支持代码更新自动上线）** 和 **本地命令行快速部署**。
+
+---
+
+### 方式一：通过 Cloudflare 网页控制台从 GitHub 部署（推荐）
+
+该方式完全无需在本地安装 Node.js/Wrangler，且后续提交代码至 GitHub 会自动触发构建与持续部署。
+
+#### 步骤 1：创建 KV 存储命名空间
+1. 登录 [Cloudflare 控制台 (Dashboard)](https://dash.cloudflare.com/)。
+2. 在左侧导航栏点击 **Storage & Databases** -> **KV**。
+3. 点击右上角 **Create a namespace (创建命名空间)**。
+4. 输入命名空间名称：`AUTH_KV`，点击 **Add (添加)**。
+
+#### 步骤 2：连接 GitHub 仓库创建 Worker
+1. 在左侧导航栏点击 **Compute (Workers & Pages)**。
+2. 点击右上角 **Create (创建)** -> 点击 **Workers** 选项卡下方的 **Connect to Git (连接到 Git)**。
+3. 授权并选择你的 GitHub 账号，选中 **`agent-buddy-server`** 仓库。
+4. 部署配置保持默认即可（项目根目录下已有 `wrangler.toml` 与 `package.json`）。
+5. 点击 **Save and Deploy (保存并部署)**。
+
+#### 步骤 3：绑定 KV 命名空间（重要）
+1. 首次部署完成后，进入该 Worker 页面，切换到 **Settings (设置)** 选项卡。
+2. 在左侧子菜单点击 **Bindings (绑定)**。
+3. 点击 **Add (添加绑定)** -> 选择 **KV Namespace (KV 命名空间)**：
+   - **Variable name (变量名称，必须完全一致)**：填入 `AUTH_KV`
+   - **KV namespace (选择命名空间)**：下拉选中步骤 1 中创建的 `AUTH_KV`
+4. 点击 **Save and deploy (保存并部署)**。
+
+#### 步骤 4：开始使用
+- 点击 Overview 页面中分配的公网地址（如 `https://agent-buddy-server.<你的用户名>.workers.dev`）即可打开 Web 管理后台！
+- 首次访问时，系统会自动生成管理密钥并完成登录展示。
+
+---
+
+### 方式二：通过本地终端命令行部署 (Wrangler CLI)
+
+适合习惯本地命令行的开发者：
+
+#### 1. 安装依赖
 
 进入 `agent-buddy-server` 目录：
 
@@ -39,9 +78,13 @@ cd agent-buddy-server
 npm install
 ```
 
-### 2. 创建 Cloudflare KV 命名空间
+#### 2. 登录 Cloudflare
 
-运行以下命令在 Cloudflare 创建存储命名空间：
+```bash
+npx wrangler login
+```
+
+#### 3. 创建 Cloudflare KV 命名空间
 
 ```bash
 npx wrangler kv namespace create AUTH_KV
@@ -63,7 +106,7 @@ binding = "AUTH_KV"
 id = "替换为你的实际_kv_id"
 ```
 
-### 3. 一键部署到 Cloudflare
+#### 4. 一键部署到 Cloudflare
 
 ```bash
 npm run deploy
@@ -72,9 +115,11 @@ npm run deploy
 部署完成后，终端会输出你的 Worker 服务公网地址，例如：
 `https://agent-buddy-server.<你的二级域名>.workers.dev`
 
-> **提示：MANAGEMENT_KEY 无需在代码中设置！**
-> - **默认方式（自动生成）**：首次部署后打开网页，系统会自动生成高强度密钥并完成登录，页面上可一键复制。
-> - **自定义方式（可选）**：若你希望使用固定密码，直接在 Cloudflare 网页后台：
+---
+
+> **关于 MANAGEMENT_KEY（管理密钥）：**
+> - **默认方式（零配置自生成）**：首次部署完成后直接在浏览器中打开服务网址，系统会自动生成高强度密钥并完成登录，页面上可一键复制。
+> - **自定义方式（可选）**：若你希望使用固定密码，可在 Cloudflare 网页后台：
 >   *Workers & Pages -> agent-buddy-server -> Settings -> Variables and Secrets -> 添加环境变量 `MANAGEMENT_KEY`* 即可，无需改动任何代码文件。
 
 ---
